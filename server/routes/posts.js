@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 import pool from '../db.js';
 import { requireAuth } from './auth.js';
 
@@ -35,7 +35,7 @@ router.post('/', requireAuth, async (req, res) => {
     // Sanitize HTML in blocks to prevent XSS
     const sanitizedBlocks = (blocks || []).map(block => {
       if (block.text && typeof block.text === 'string') {
-        return { ...block, text: DOMPurify.sanitize(block.text) };
+        return { ...block, text: sanitizeHtml(block.text) };
       }
       return block;
     });
