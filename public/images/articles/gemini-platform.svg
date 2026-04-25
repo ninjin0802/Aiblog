@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#1a1a2e"/>
+  <text x="400" y="200" text-anchor="middle" fill="#4285f4" font-family="Arial, sans-serif" font-size="28" font-weight="bold">Gemini Enterprise</text>
+  <text x="400" y="240" text-anchor="middle" fill="#4285f4" font-family="Arial, sans-serif" font-size="28" font-weight="bold">Agent Platform</text>
+  <text x="400" y="295" text-anchor="middle" fill="#a0a0a0" font-family="Arial, sans-serif" font-size="16">Low-Code AI Agent Development</text>
+</svg>

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>個人ブログ — 3 variations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #0b0d10; color: #d7dde3; }
+    body { font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace; min-height: 100vh; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid #ff6b6b; outline-offset: 2px;
+    }
+    @keyframes caretBlink { 50% { opacity: 0; } }
+    /* Variant switcher chrome */
+    .chrome {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      z-index: 100;
+      display: flex; gap: 0;
+      background: rgba(10, 10, 14, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 2px;
+      padding: 4px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px;
+    }
+    .chrome button {
+      background: transparent; border: none; color: #8a8f99;
+      font-family: inherit; font-size: 11px;
+      padding: 6px 12px; cursor: pointer; letter-spacing: 0.3px;
+    }
+    .chrome button.active {
+      background: #ff6b6b; color: #0a0a0e;
+    }
+    .tweaks {
+      position: fixed; bottom: 16px; right: 16px;
+      background: rgba(10, 10, 14, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #d7dde3;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 12px;
+      padding: 14px 16px; min-width: 260px;
+      z-index: 100;
+    }
+    .tweaks h4 {
+      margin: 0 0 10px; font-size: 11px; letter-spacing: 1.5px;
+      color: #ff6b6b; font-weight: 600;
+    }
+    .tweaks label { display: block; margin-bottom: 10px; color: #8a8f99; }
+    .tweaks select, .tweaks input[type=color] {
+      background: #1a1a1e; border: 1px solid #2a2a30;
+      color: #d7dde3; font-family: inherit; font-size: 12px;
+      padding: 4px 6px; width: 100%;
+    }
+    .tweaks .row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="data/posts.js"></script>
+  <script type="text/babel" src="components/shared.jsx"></script>
+  <script type="text/babel" src="components/variant-a.jsx"></script>
+  <script type="text/babel" src="components/variant-b.jsx"></script>
+  <script type="text/babel" src="components/variant-c.jsx"></script>
+  <script type="text/babel" src="components/post-view.jsx"></script>
+  <script type="text/babel" src="components/about-archive.jsx"></script>
+  <script type="text/babel" src="components/admin.jsx"></script>
+
+  <script type="text/babel">
+    // Central palette resolver so PostView / About / Archive inherit the right tokens.
+    function getPalette(variant, dark) {
+      if (variant === "a") return dark ? window.VA : window.VA.light;
+      if (variant === "b") return dark ? window.VB : window.VB.light;
+      if (variant === "c") return dark ? window.VC.dark : window.VC;
+      return {};
+    }
+
+    const TWEAKS = /*EDITMODE-BEGIN*/{
+      "variant": "b",
+      "dark": false,
+      "density": "normal"
+    }/*EDITMODE-END*/;
+
+    function App() {
+      // Persistent state — restore variant + route on reload.
+      const [variant, setVariant] = React.useState(() => {
+        return localStorage.getItem("blog:variant") || TWEAKS.variant;
+      });
+      const [dark, setDark] = React.useState(() => {
+        const saved = localStorage.getItem("blog:dark");
+        return saved ? saved === "1" : TWEAKS.dark;
+      });
+      const [route, setRoute] = React.useState(() => {
+        try { return JSON.parse(localStorage.getItem("blog:route") || '{"name":"home"}'); }
+        catch { return { name: "home" }; }
+      });
+      const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+      React.useEffect(() => { localStorage.setItem("blog:variant", variant); }, [variant]);
+      React.useEffect(() => { localStorage.setItem("blog:dark", dark ? "1" : "0"); }, [dark]);
+      React.useEffect(() => { localStorage.setItem("blog:route", JSON.stringify(route)); }, [route]);
+
+      // Edit-mode protocol — register listener BEFORE announcing availability.
+      React.useEffect(() => {
+        const onMsg = (e) => {
+          const d = e.data;
+          if (!d || !d.type) return;
+          if (d.type === "__activate_edit_mode") setTweaksOpen(true);
+          if (d.type === "__deactivate_edit_mode") setTweaksOpen(false);
+        };
+        window.addEventListener("message", onMsg);
+        window.parent.postMessage({ type: "__edit_mode_available" }, "*");
+        return () => window.removeEventListener("message", onMsg);
+      }, []);
+
+      const persistEdit = (edits) => {
+        window.parent.postMessage({ type: "__edit_mode_set_keys", edits }, "*");
+      };
+
+      const palette = getPalette(variant, dark);
+
+      const openPost = (postId) => setRoute({ name: "post", postId });
+      const goHome = () => setRoute({ name: "home" });
+
+      // Render main content
+      let content;
+      if (route.name === "post") {
+        const post = window.BLOG_POSTS.find((p) => p.id === route.postId) || window.BLOG_POSTS[0];
+        content = <PostView post={post} palette={palette} dark={dark} onBack={goHome} variant={variant} />;
+      } else if (route.name === "about") {
+        content = <AboutPage palette={palette} onBack={goHome} />;
+      } else if (route.name === "archive") {
+        content = <ArchivePage palette={palette} onBack={goHome} onPostClick={openPost} />;
+      } else if (route.name === "admin") {
+        content = <AdminPage palette={palette} onBack={goHome} onOpenPost={openPost} />;
+      } else {
+        const common = {
+          dark, onPostClick: openPost,
+          onToggleDark: () => setDark((d) => !d),
+          activePostId: route.postId,
+        };
+        if (variant === "a") content = <VariantA {...common} />;
+        else if (variant === "b") content = <VariantB {...common} />;
+        else content = <VariantC {...common} />;
+      }
+
+      return (
+        <div data-screen-label={route.name === "home" ? `01 Home · Variant ${variant.toUpperCase()}` : route.name === "post" ? `02 Post · ${route.postId}` : route.name === "about" ? "03 About" : "04 Archive"}>
+          {/* Variant switcher */}
+          <div className="chrome">
+            {["a", "b", "c"].map((v) => (
+              <button
+                key={v}
+                className={variant === v ? "active" : ""}
+                onClick={() => { setVariant(v); setRoute({ name: "home" }); persistEdit({ variant: v }); }}
+              >
+                {v === "a" && "A · $HOME/log"}
+                {v === "b" && "B · 午前3時"}
+                {v === "c" && "C · static.md"}
+              </button>
+            ))}
+            <span style={{ width: 1, background: "rgba(255,255,255,0.1)", margin: "0 6px" }} />
+            <button onClick={goHome} className={route.name === "home" ? "active" : ""}>home</button>
+            <button
+              onClick={() => setRoute({ name: "post", postId: "rust-lifetimes-finally" })}
+              className={route.name === "post" ? "active" : ""}
+            >post</button>
+            <button
+              onClick={() => setRoute({ name: "about" })}
+              className={route.name === "about" ? "active" : ""}
+            >about</button>
+            <button
+              onClick={() => setRoute({ name: "archive" })}
+              className={route.name === "archive" ? "active" : ""}
+            >archive</button>
+            <button
+              onClick={() => setRoute({ name: "admin" })}
+              className={route.name === "admin" ? "active" : ""}
+              style={{ color: route.name === "admin" ? undefined : "#ff6b6b" }}
+            >/admin</button>
+          </div>
+
+          {content}
+
+          {/* Tweaks panel */}
+          {tweaksOpen && (
+            <div className="tweaks">
+              <h4>TWEAKS</h4>
+              <label>
+                Variant
+                <select
+                  value={variant}
+                  onChange={(e) => { setVariant(e.target.value); persistEdit({ variant: e.target.value }); setRoute({ name: "home" }); }}
+                >
+                  <option value="a">A — $HOME/log (terminal list)</option>
+                  <option value="b">B — 午前3時のノート (card grid)</option>
+                  <option value="c">C — static.md (file-tree docs)</option>
+                </select>
+              </label>
+              <label>
+                Theme
+                <div className="row">
+                  <button
+                    onClick={() => { setDark(true); persistEdit({ dark: true }); }}
+                    style={{
+                      flex: 1, background: dark ? "#ff6b6b" : "transparent",
+                      color: dark ? "#0a0a0e" : "#d7dde3",
+                      border: "1px solid #2a2a30", padding: "4px 8px",
+                      fontFamily: "inherit", fontSize: 11, cursor: "pointer",
+                    }}
+                  >dark</button>
+                  <button
+                    onClick={() => { setDark(false); persistEdit({ dark: false }); }}
+                    style={{
+                      flex: 1, background: !dark ? "#ff6b6b" : "transparent",
+                      color: !dark ? "#0a0a0e" : "#d7dde3",
+                      border: "1px solid #2a2a30", padding: "4px 8px",
+                      fontFamily: "inherit", fontSize: 11, cursor: "pointer",
+                    }}
+                  >light</button>
+                </div>
+              </label>
+              <label>
+                Jump to route
+                <div className="row">
+                  <button onClick={goHome} style={tweakBtn}>home</button>
+                  <button onClick={() => setRoute({ name: "post", postId: "rust-lifetimes-finally" })} style={tweakBtn}>post</button>
+                  <button onClick={() => setRoute({ name: "about" })} style={tweakBtn}>about</button>
+                  <button onClick={() => setRoute({ name: "archive" })} style={tweakBtn}>archive</button>
+                  <button onClick={() => setRoute({ name: "admin" })} style={tweakBtn}>/admin</button>
+                </div>
+              </label>
+              <div style={{ fontSize: 10, color: "#5a5f69", marginTop: 8, paddingTop: 8, borderTop: "1px dashed #2a2a30" }}>
+                pick a variant, toggle theme, jump between pages. state persists.
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const tweakBtn = {
+      flex: 1, background: "transparent", color: "#d7dde3",
+      border: "1px solid #2a2a30", padding: "4px 6px",
+      fontFamily: "inherit", fontSize: 10, cursor: "pointer",
+    };
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

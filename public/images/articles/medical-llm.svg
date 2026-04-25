@@ -1,0 +1,4 @@
+  <rect width="800" height="450" fill="#0f3460"/>
+  <text x="400" y="225" text-anchor="middle" dominant-baseline="middle" fill="#e94560" font-family="Arial, sans-serif" font-size="28" font-weight="bold">Medical LLM</text>
+  <text x="400" y="275" text-anchor="middle" fill="#a0a0a0" font-family="Arial, sans-serif" font-size="16">UTokyo Matsuo Lab - 93.3% Accuracy</text>
+</svg>

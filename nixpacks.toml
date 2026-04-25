@@ -1,0 +1,8 @@
+[phases.setup]
+aptPkgs = ["fonts-noto-cjk", "fontconfig"]
+
+[phases.install]
+cmds = ["npm install --include=dev"]
+
+[phases.build]
+cmds = ["npm run build"]
